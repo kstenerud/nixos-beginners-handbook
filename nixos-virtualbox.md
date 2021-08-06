@@ -3,21 +3,6 @@ Running NixOS under VirtualBox
 
 [VirtualBox](https://www.virtualbox.org/) is a user-friendly GUI-based hypervisor. Setting up a NixOS VM is fairly straightforward, with a minor tweak to the networking.
 
-Setting up Networking
----------------------
-
-Since we'll be connecting to the guest via SSH, we first need a network to connect to:
-
-From the `File` menu choose `Host Network Manager...`
-![file menu](img/virtualbox-menu-host-network-manager.png)
-
-From the `Host Network Manager` window, click `Create`. It will create the network `vboxnet0`
-
-![Host Network Manager](img/virtualbox-host-network-manager.png)
-
-Close the `Host Network Manager` window to bring you back to the `VirtualBox Manager` window. Now you're ready to create your new VM.
-
-
 Creating the VM
 ---------------
 
@@ -54,21 +39,20 @@ Click `Create` to create the VM and go back to the `VirtualBox Manager` window.
 Configuring Networking
 ----------------------
 
-From the `VirtualBox Manager` window, click `Settings`, then `Network`.
+From the `VirtualBox Manager` window, click `Settings`, then `Network`, then `Advanced`.
 
 ![VirtualBox Manager](img/virtualbox-manager.png)
-![Host only networking](img/virtualbox-host-only-networking.png)
+![Host only networking](img/virtualbox-networking-advanced.png)
 
-By default, VirtualBox selects `NAT` since that's the safest option for the most common use case (connecting from the guest to other machines). But we want to be able to SSH into this VM, so we need a different network setup. You have two main choices:
+You'll need to add a port forward so that you can SSH into the machine. Click `Port Forwarding` and add a forwarding rule from port `2222` (host side) to `22` (guest side).
 
-* Host-only, which only allows the host to connect to the guest.
-* Bridged adapter, which puts the guest on your local network (any machine on the network can connect to it).
+![Port forwards](img/virtualbox-networking-port-forward.png)
 
-For starters, we'll use host-only networking (you can always change this later).
+Click `OK` to go back to the network settings, then `OK` again to go back to the `VirtualBox Manager` window.
 
-Select `Host-only Adapter`. It will automatically choose the `vboxnet0` network you created earlier.
+Your host machine now has port 2222 forwarded to the SSH port (22) on the guest. To SSH in to the installer for example, you would use `ssh -p 2222 nixos@localhost`.
 
-Click `OK` to go back to the `VirtualBox Manager` window.
+
 
 Starting the VM
 ---------------
@@ -85,4 +69,4 @@ After awhile it will finish booting and automatically log you in as user `nixos`
 
 ![NixOS booted](img/virtualbox-installer-booted.png)
 
-Your VirtualBox virtual machine is now booted into the NixOS minimal installer. You can now continue with the [installation](installing.md).
+Your VirtualBox virtual machine is now booted into the NixOS minimal installer. You can now continue with the [installation](installing-vm.md#building-a-virtual-machine).

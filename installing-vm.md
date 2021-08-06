@@ -1,5 +1,5 @@
-Installing NixOS
-================
+Installing NixOS in a Virtual Machine
+=====================================
 
 There are many ways to install NixOS:
 
@@ -26,7 +26,7 @@ Here are instructions for installing a VM using two popular hypervisors:
 Connecting to the installer via SSH
 -----------------------------------
 
-The console can be a bit funny at times (especially if you resize your window), so it's generally nicer to SSH in. We'll use a password-based SSH login since it's only the installer.
+The console can be a bit funny at times, so it's generally nicer to SSH in. We'll need a password for the `nixos` user to allow SSH logins:
 
 1. Create a password (this is only setting a password for the **installer**, not for the OS you are about to install):
 
@@ -58,6 +58,17 @@ Last login: Sun Aug  1 05:39:07 2021
 [nixos@nixos:~]$
 ```
 
+Or, if you've set up host port forwarding, simply connect to localhost port 2222:
+
+```text
+$ ssh -p 2222 nixos@localhost
+Password: 
+Last login: Sun Aug  1 05:39:07 2021
+
+[nixos@nixos:~]$
+```
+
+
 
 Installing NixOS
 ----------------
@@ -76,8 +87,8 @@ Doing the installation process as root makes it less cumbersome, and it's safe s
 
 This follows the [example in the NixOS manual](https://nixos.org/manual/nixos/stable/#sec-installation-partitioning). Your disk will be different depending on the hypervisor you're using. For example:
 
-* In VirtualBox, it's `/dev/sda`
-* In libvirt, it's `/dev/vda`
+* In VirtualBox, you'll install to `/dev/sda`
+* In libvirt, you'll install to `/dev/vda`
 
 You can find out what your disk's device is using `fdisk`:
 
@@ -91,6 +102,7 @@ Disk /dev/sda: 16 GiB, 17179869184 bytes, 33554432 sectors
 Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt).
 
 ```text
+dd if=/dev/zero of=/dev/sda bs=512 count=1 conv=notrunc
 parted --script /dev/sda -- mklabel gpt
 parted --script /dev/sda -- mkpart primary 512MiB -8GiB
 parted --script /dev/sda -- mkpart primary linux-swap -8GiB 100%
@@ -106,73 +118,17 @@ swapon /dev/sda2
 nixos-generate-config --root /mnt
 ```
 
-### Customize your install
+### Configure and install
 
-At this point, you can customize your configuration before installing. Configuration happens via `configuration.nix`, and the default config comes with a number of commented-out suggestions. Normally, you'd keep your configuration files in a repository and clone or copy them in to the machine being provisioned.
+NixOS is currently in transition (in mid-2021), and will soon move over to the new [flakes](https://www.tweag.io/blog/2020-05-25-flakes/) system, so I'll include instructions for the current installation method as well as the new flakes method:
 
-To edit your configuration:
+* [Installing via configuration.nix](installing-configuration.md)
+* [Installing via flakes](installing-flakes.md)
 
-```text
-[root@nixos:~]# nano /mnt/etc/nixos/configuration.nix
-```
-
-Once you're happy with your configuration, press CTRL-X and save the file to exit the editor.
-
-#### Configuration: Add an admin user
-
-It's a good idea to create an admin user for yourself because logging in as root is dangerous. Here's an example user with admin privileges:
-
-```text
-  users.users.myuser = {
-    isNormalUser = true;
-    home = "/home/myuser";
-    description = "My example admin user";
-    # wheel allows sudo, networkmanager allows network modifications
-    extraGroups = [ "wheel" "networkmanager" ];
-    # For password login (works with console and SSH):
-    hashedPassword = "$6$Cc5l1Gyv2gP$Mw0RKFkH719QCZAggQDTJIDcE4HoHFEYUqS71H0FVA/AHR4BJEWhfyPaR3RKiz3WsMsDp1di4oPX3b1s3s6Jt.";
-    # For SSH key login (works with SSH only):
-    openssh.authorizedKeys.keys = [ "ssh-dss AAAAB3Nza... myuser@foobar" ];
-  };
-```
-
-`hashedPassword` can be generated using `mkpasswd`:
-
-```text
-[root@nixos:~]# mkpasswd -m sha-512
-Password: 
-$6$Cc5l1Gyv2gP$Mw0RKFkH719QCZAggQDTJIDcE4HoHFEYUqS71H0FVA/AHR4BJEWhfyPaR3RKiz3WsMsDp1di4oPX3b1s3s6Jt.
-```
-
-#### Configuration: Enable SSH
-
-You can also turn on SSH so that you can connect via secure shell after rebooting (otherwise only the console will work):
-
-```text
-  services.openssh.enable = true; 
-```
-
-### Run the installer
-
-Once you're happy with your configuration, it's time to install the OS:
-
-```text
-[root@nixos:~]# nixos-install
-```
-
-If you've made any mistakes, it will print out error messages detailing what you need to fix in your `configuration.nix`.
-
-The last installer step will ask you to set the root password (you can use `nixos-install --no-root-passwd` to disable this and leave it blank):
-
-```text
-setting root password...
-Enter new UNIX password: ***
-Retype new UNIX password: ***
-```
 
 ### Reboot
 
-This will cause it to reboot into your newly installed disk:
+After installing, simply reboot and it will boot from your newly installed disk:
 
 ```text
 [root@nixos:~]# reboot
@@ -190,10 +146,32 @@ Run 'nixos-help' for the NixOS manual.
 nixos login: 
 ```
 
-Log in as the admin user you created (or you can log in via SSH if you enbled it). If you need to make further changes to the configuration, edit `/etc/nixos/configuration.nix` and then build the new configuration:
+Log in as the admin user you created (or you can log in via SSH if you enbled it).
+
+
+### Post-install changes
+
+If you need to make further changes to the OS after installing, simply edit your configuration and rebuild.
+
+#### via configuration.nix
+
+Edit `/etc/nixos/configuration.nix` and then build the new configuration:
 
 ```text
 nixos-rebuild switch
 ```
+
+#### via flakes
+
+Edit `/etc/nixos/flake.nix` and then build the new configuration:
+
+```text
+nixos-rebuild switch --flake /etc/nixos/#system
+```
+
+**IMPORTANT**: Don't forget to commit your changes to the flake or else they'll be ignored! You'll see a warning like `warning: Git tree '/etc/nixos' is dirty`
+
+
+### Done!
 
 At this point, you have a functional NixOS in a virtual machine. You're at the equivalent of [chapter 3 in the NixOS manual](https://nixos.org/manual/nixos/stable/#sec-changing-config), and can now start [configuring your OS](https://nixos.org/manual/nixos/stable/index.html#ch-configuration).

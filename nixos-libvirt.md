@@ -121,4 +121,4 @@ $ virsh net-dhcp-leases default
 
 ---------------------------------------------------------------------
 
-Your libvirt virtual machine is now booted into the NixOS minimal installer. You can now continue with the [installation](installing.md).
+Your libvirt virtual machine is now booted into the NixOS minimal installer. You can now continue with the [installation](installing-vm.md#building-a-virtual-machine).

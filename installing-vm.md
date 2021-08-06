@@ -85,21 +85,24 @@ Doing the installation process as root makes it less cumbersome, and it's safe s
 
 ### Setup the disk
 
-This follows the [example in the NixOS manual](https://nixos.org/manual/nixos/stable/#sec-installation-partitioning). Your disk will be different depending on the hypervisor you're using. For example:
+This follows the [example in the NixOS manual](https://nixos.org/manual/nixos/stable/#sec-installation-partitioning). Your disk's device will be different depending on the hypervisor you're using. For example:
 
 * In VirtualBox, you'll install to `/dev/sda`
 * In libvirt, you'll install to `/dev/vda`
 
-You can find out what your disk's device is using `fdisk`:
+You can find out the device name for your disk using `parted`:
 
 ```text
-[root@nixos:~]# fdisk -l
-...
-Disk /dev/sda: 16 GiB, 17179869184 bytes, 33554432 sectors
-...
+[root@nixos:~]# parted -m -l
+BYT;                                                                      
+/dev/sr0:697MB:scsi:2048:2048:msdos:QEMU QEMU DVD-ROM:;
+2:25.4MB:113MB:88.1MB:::esp;
+
+BYT;                                                                      
+/dev/vda:17.2GB:virtblk:512:512:unknown:Virtio Block Device:;
 ```
 
-Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt).
+Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt). This builds a 511MB ESP boot partition at the beginning of the disk (`mkpart ESP fat32 1MiB 512MiB`), an 8GB swap partition at the end of the disk (`mkpart primary linux-swap -8GiB 100%`), and uses the remainder for the root fs (`mkpart primary 512MiB -8GiB`). The logical partition ordering is 1: root, 2: swap, 3: boot.
 
 ```text
 dd if=/dev/zero of=/dev/sda bs=512 count=1 conv=notrunc
@@ -115,7 +118,6 @@ mount /dev/disk/by-label/nixos /mnt
 mkdir -p /mnt/boot
 mount /dev/disk/by-label/boot /mnt/boot
 swapon /dev/sda2
-nixos-generate-config --root /mnt
 ```
 
 ### Configure and install

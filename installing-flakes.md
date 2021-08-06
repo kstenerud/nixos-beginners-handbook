@@ -1,7 +1,7 @@
 Installing using Flakes
 =======================
 
-Flakes are a new experimental feature (in mid-2021) that will soon enter mainstream. [This blog post](https://www.tweag.io/blog/2020-05-25-flakes/) gives a good overview of the problems flakes solve.
+Flakes are an experimental feature (in mid-2021) that will soon enter mainstream. [This blog post](https://www.tweag.io/blog/2020-05-25-flakes/) gives a good overview of the problems flakes solve.
 
 
 
@@ -39,18 +39,21 @@ git config --global user.name "Your Name"
 Build a flake
 -------------
 
-A flake package is based around the `flake.nix` file, which will behave similarly to the old `configuration.nix` file. We'll create a basic flake that has SSH enabled and an admin user (because logging in as root all the time is dangerous).
+A flake package is based around the `flake.nix` file, which looks similar to the old `configuration.nix` file. We'll create a basic flake that has SSH enabled and an admin user (because logging in as root all the time is dangerous).
 
-We'll be putting the flake directly in the usual `/etc/nixos` dir (basically, `flake.nix` will replace `configuration.nix`). The cool thing is that if you already have a flake set up in a repository for your machine, you could just boot the installer image, git clone your flake repo into `/mnt/etc/nixos`, and run `nixos-install`.
+We'll be putting the flake directly in the usual `/etc/nixos` dir (basically, `flake.nix` will replace `configuration.nix`). If you already have a flake set up in a repository for your machine, you could just boot the installer image, git clone your flake repo into `/mnt/etc/nixos`, and then run `nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system`.
 
 ### Generate hardware-configuration.nix
 
-We need a valid `hardware-configuration.nix`, so we'll generate one using `nixos-generate-config` and then throw out the `configuration.nix` file.
+We need a valid `hardware-configuration.nix`, so we'll generate a configuration using `nixos-generate-config` and then delete the `configuration.nix` file.
 
 ```text
 nixos-generate-config --root /mnt
 rm /mnt/etc/nixos/configuration.nix
 ```
+
+Now the only file in `/mnt/etc/nixos` is `hardware-configuration.nix`
+
 
 ### Generate a password hash for the admin user
 
@@ -59,21 +62,21 @@ When adding users declaratively, we must provide a [hashed password](https://nix
 ```text
 [root@nixos:~]# mkpasswd -m sha-512
 Password: 
-$6$TxcQlxAlAM$Kz8iWHm..ZkLuLGq1oLshWVemgc1PIJihKPROQGZBvvSnE85pdMT7Wr7J4f50Qbq2dsUitoT0GPQ8yxhKyddM1
+$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.
 ```
 
 ### Generate flake.nix
 
-Now on to our actual machine configuration! `flake.nix` looks very similar to `configuration.nix`, and much of it works in the same way.
+`flake.nix` looks very similar to `configuration.nix`, and much of it works in the same way.
 
-Before pasting the following snippet into installer shell, you'll want to:
+Before pasting the following snippet into your installer shell, you'll want to:
 - Pick your own username and home dir
 - Generate your own hashed password
 - Set your time zone
 
 **Notes**:
+- We must specifically enable flakes in our new configuration because they are still an experimental feature.
 - The `system` in `nixosConfigurations.system` is an arbitrarily chosen name that will be used in the call to `nixos-install`. You could actually name it anything you want, or have multiple configurations that you can choose from when calling `nixos-install` such as `desktop`, `laptop`, etc.
-- We must specifically enable flakes in our new configuration because they are still an experimental feature (in mid-2021).
 
 ```text
 cat << 'EOF' > /mnt/etc/nixos/flake.nix
@@ -117,7 +120,7 @@ cat << 'EOF' > /mnt/etc/nixos/flake.nix
               # wheel allows sudo, networkmanager allows network modifications
               extraGroups = [ "wheel" "networkmanager" ];
               # For password login (works with console and SSH):
-              hashedPassword = "$6$TxcQlxAlAM$Kz8iWHm..ZkLuLGq1oLshWVemgc1PIJihKPROQGZBvvSnE85pdMT7Wr7J4f50Qbq2dsUitoT0GPQ8yxhKyddM1";
+              hashedPassword = "$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.";
               # For SSH key login (works with SSH only):
               #openssh.authorizedKeys.keys = [ "ssh-dss AAAAB3Nza... myuser@foobar" ];
             };
@@ -148,17 +151,13 @@ Run the installer
 When installing, we simply point `nixos-install` to our `system` configuration in the flake:
 
 ```text
-nixos-install --flake /mnt/etc/nixos/#system
+nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system
 ```
+
+**Note**: We've specified `--no-root-passwd`, which means that you cannot log in as root (you must use your admin account instead). If you omit this option, the installer will ask you to provide a root password at the end of the install process.
 
 As a side-effect, nixos-install will generate `flake.lock`, which locks to the current versions of the software being installed. You should also add this to the source code repository.
 
 If you've made any mistakes, it will print out error messages detailing what you need to fix in your `configuration.nix`.
 
-The last installer step will ask you to set the root password (you can use `nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system` to disable this and leave it blank):
-
-```text
-setting root password...
-Enter new UNIX password: ***
-Retype new UNIX password: ***
-```
+[Back to the VM installer instructions](installing-vm.md#configure-and-install)

@@ -69,4 +69,6 @@ After awhile it will finish booting and automatically log you in as user `nixos`
 
 ![NixOS booted](img/virtualbox-installer-booted.png)
 
-Your VirtualBox virtual machine is now booted into the NixOS minimal installer. You can now continue with the [installation](installing-vm.md#building-a-virtual-machine).
+Your VirtualBox virtual machine is now booted into the NixOS minimal installer.
+
+[Back to the VM installer instructions](installing-vm.md#building-a-virtual-machine)

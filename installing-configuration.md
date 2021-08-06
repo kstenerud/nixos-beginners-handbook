@@ -40,18 +40,18 @@ It's a good idea to create an admin user for yourself because logging in as root
     # wheel allows sudo, networkmanager allows network modifications
     extraGroups = [ "wheel" "networkmanager" ];
     # For password login (works with console and SSH):
-    hashedPassword = "$6$TxcQlxAlAM$Kz8iWHm..ZkLuLGq1oLshWVemgc1PIJihKPROQGZBvvSnE85pdMT7Wr7J4f50Qbq2dsUitoT0GPQ8yxhKyddM1";
+    hashedPassword = "$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.";
     # For SSH key login (works with SSH only):
     #openssh.authorizedKeys.keys = [ "ssh-dss AAAAB3Nza... myuser@foobar" ];
   };
 ```
 
-`hashedPassword` can be generated using `mkpasswd`:
+**Note**: You must generate your own `hashedPassword` using `mkpasswd`:
 
 ```text
 [root@nixos:~]# mkpasswd -m sha-512
 Password: 
-$6$TxcQlxAlAM$Kz8iWHm..ZkLuLGq1oLshWVemgc1PIJihKPROQGZBvvSnE85pdMT7Wr7J4f50Qbq2dsUitoT0GPQ8yxhKyddM1
+$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.
 ```
 
 ### Configuration: Enable SSH
@@ -69,15 +69,11 @@ Run the installer
 Once you're happy with your configuration, it's time to install the OS:
 
 ```text
-[root@nixos:~]# nixos-install
+[root@nixos:~]# nixos-install --no-root-passwd
 ```
+
+**Note**: We've specified `--no-root-passwd`, which means that you cannot log in as root (you must use your admin account instead). If you omit this option, the installer will ask you to provide a root password at the end of the install process.
 
 If you've made any mistakes, it will print out error messages detailing what you need to fix in your `configuration.nix`.
 
-The last installer step will ask you to set the root password (you can use `nixos-install --no-root-passwd` to disable this and leave it blank):
-
-```text
-setting root password...
-Enter new UNIX password: ***
-Retype new UNIX password: ***
-```
+[Back to the VM installer instructions](installing-vm.md#configure-and-install)

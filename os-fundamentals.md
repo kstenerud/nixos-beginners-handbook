@@ -1,5 +1,5 @@
-Fundamentals
-============
+NixOS Fundamentals
+==================
 
 Where are the configuration files?
 ----------------------------------

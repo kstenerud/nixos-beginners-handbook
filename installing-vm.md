@@ -1,13 +1,13 @@
 Installing NixOS in a Virtual Machine
 =====================================
 
-There are many ways to install NixOS:
+NixOS, being ultra-configurable, has seemingly endless installation methods, making it hard to decide which is best for your needs. The primary setups are:
 
 * Over top of an existing system
-* As a complete operating system
+* As its own complete operating system
 * In a virtual machine or container
 
-NixOS gives you and abundance of choice, but as a beginner too much choice leads to analysis paralysis, so for learning purposes we'll just install on a VM. This is the safest option since the inevitable bumps in the road won't harm your primary operating system.
+As a beginner, you'll want a sandbox to play around in and break things without breaking your main OS or environment, and you'll want to be able to quickly destroy and rebuild it from scratch after you break it too much. For this purpose, virtual machines are ideal.
 
 We'll be installing from the [NixOS minimal ISO image](https://nixos.org/download.html) because it's a very basic install (no windowing environment) that also allows you to work over an SSH connection.
 
@@ -16,10 +16,12 @@ We'll be installing from the [NixOS minimal ISO image](https://nixos.org/downloa
 Building a virtual machine
 --------------------------
 
-Here are instructions for installing a VM using two popular hypervisors:
+There are many virtual machine technologies to choose from depending on your host OS. Pick whichever you're most comfortable with. Here are instructions for some of them:
 
-* [Building a VM using VirtualBox](nixos-virtualbox.md)
-* [Building a VM using libvirt](nixos-libvirt.md)
+| Technology                        | GUI | TUI | Linux | Mac | Windows | Other   |
+| --------------------------------- | --- | --- | ----- | --- | ------- | ------- |
+| [VirtualBox](nixos-virtualbox.md) |  Y  |  Y  |   Y   |  Y  |    Y    | Solaris |
+| [libvirt](nixos-libvirt.md)]      |  Y  |  Y  |   Y   |  Y  |    Y    | FreeBSD |
 
 
 
@@ -102,7 +104,7 @@ BYT;
 /dev/vda:17.2GB:virtblk:512:512:unknown:Virtio Block Device:;
 ```
 
-Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt). This builds a 511MB ESP boot partition at the beginning of the disk (`mkpart ESP fat32 1MiB 512MiB`), an 8GB swap partition at the end of the disk (`mkpart primary linux-swap -8GiB 100%`), and uses the remainder for the root fs (`mkpart primary 512MiB -8GiB`). The logical partition ordering is 1: root, 2: swap, 3: boot.
+Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt). This builds a 511MB ESP boot partition at the beginning of the disk (`mkpart ESP fat32 1MiB 512MiB`), an 8GB swap partition at the end of the disk (`mkpart primary linux-swap -8GiB 100%`), and uses the remainder for the root fs (`mkpart primary 512MiB -8GiB`). The logical partition ordering is 1: root, 2: swap, 3: boot. We also clear the first block of the drive in case it has a partition table already.
 
 ```text
 dd if=/dev/zero of=/dev/sda bs=512 count=1 conv=notrunc
@@ -124,8 +126,8 @@ swapon /dev/sda2
 
 NixOS is currently in transition (in mid-2021), and will soon move over to the new [flakes](https://www.tweag.io/blog/2020-05-25-flakes/) system, so I'll include instructions for the current installation method as well as the new flakes method:
 
-* [Installing via configuration.nix](installing-configuration.md)
-* [Installing via flakes](installing-flakes.md)
+* [Installing via flakes](installing-flakes.md) (new way)
+* [Installing via configuration.nix](installing-configuration.md) (old way)
 
 
 ### Reboot
@@ -155,14 +157,6 @@ Log in as the admin user you created (or you can log in via SSH if you enbled it
 
 If you need to make further changes to the OS after installing, simply edit your configuration and rebuild.
 
-#### via configuration.nix
-
-Edit `/etc/nixos/configuration.nix` and then build the new configuration:
-
-```text
-nixos-rebuild switch
-```
-
 #### via flakes
 
 Edit `/etc/nixos/flake.nix` and then build the new configuration:
@@ -172,6 +166,14 @@ nixos-rebuild switch --flake /etc/nixos/#system
 ```
 
 **IMPORTANT**: Don't forget to commit your changes to the flake or else they'll be ignored! You'll see a warning like `warning: Git tree '/etc/nixos' is dirty`
+
+#### via configuration.nix
+
+Edit `/etc/nixos/configuration.nix` and then build the new configuration:
+
+```text
+nixos-rebuild switch
+```
 
 
 ### Done!

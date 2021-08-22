@@ -43,16 +43,14 @@ A flake package is based around the `flake.nix` file, which looks similar to the
 
 We'll be putting the flake directly in the usual `/etc/nixos` dir (basically, `flake.nix` will replace `configuration.nix`). If you already have a flake set up in a repository for your machine, you could just boot the installer image, git clone your flake repo into `/mnt/etc/nixos`, and then run `nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system`.
 
-### Generate hardware-configuration.nix
 
-We need a valid `hardware-configuration.nix`, so we'll generate a configuration using `nixos-generate-config` and then delete the `configuration.nix` file.
+### Generate configuration.nix and hardware-configuration.nix
+
+Just use `nixos-generate-config` to generate a suitable base config in /mnt/etc/nixos for us:
 
 ```text
 nixos-generate-config --root /mnt
-rm /mnt/etc/nixos/configuration.nix
 ```
-
-Now the only file in `/mnt/etc/nixos` is `hardware-configuration.nix`
 
 
 ### Generate a password hash for the admin user
@@ -62,71 +60,106 @@ When adding users declaratively, we must provide a [hashed password](https://nix
 ```text
 [root@nixos:~]# mkpasswd -m sha-512
 Password: 
-$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.
+$6$E9KhMqnbJgiE$lohYFW7ckILTrYGi59tbRtRQO31Jka73N/1vNnHgAbFWMubawPjFAimB.FkfWuCfODwDuuruKXR6SDQucsDuF.
 ```
 
 ### Generate flake.nix
 
-`flake.nix` looks very similar to `configuration.nix`, and much of it works in the same way.
-
-Before pasting the following snippet into your installer shell, you'll want to:
-- Pick your own username and home dir
-- Generate your own hashed password
-- Set your time zone
+`flake.nix` looks very similar to `configuration.nix`, and much of it works in the same way. We could do everything inside `flake.nix`, but instead we're going to simply point it to `configuration.nix`.
 
 **Notes**:
 - We must specifically enable flakes in our new configuration because they are still an experimental feature.
-- The `system` in `nixosConfigurations.system` is an arbitrarily chosen name that will be used in the call to `nixos-install`. You could actually name it anything you want, or have multiple configurations that you can choose from when calling `nixos-install` such as `desktop`, `laptop`, etc.
+- Choose your own hostname for `myhostname`
 
 ```text
 cat << 'EOF' > /mnt/etc/nixos/flake.nix
 {
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-21.05";
-  outputs = { self, nixpkgs }: {
-    nixosConfigurations.system = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules =
-        [ ({ pkgs, ... }: {
-            system.configurationRevision = nixpkgs.lib.mkIf (self ? rev) self.rev;
+  outputs = { self, nixpkgs }:
+    # We define a hostname here because it's used multiple times
+    let hostname = "myhostname";
+    in {
+      nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules =
+          [ ({ pkgs, ... }: {
+              # Let 'nixos-version --json' know about the git revision of this flake.
+              system.configurationRevision = nixpkgs.lib.mkIf (self ? rev) self.rev;
 
-            imports = [ ./hardware-configuration.nix ];
+              # Enable flakes experimental feature
+              nix = {
+                package = pkgs.nixFlakes;
+                extraOptions = ''
+                  experimental-features = nix-command flakes
+                '';
+                registry.nixpkgs.flake = nixpkgs;
+              };
 
-            boot.loader.systemd-boot.enable = true;
-            boot.loader.efi.canTouchEfiVariables = true;
+              # Set the hostname
+              networking.hostName = "${hostname}";
 
-            networking.useDHCP = false;
-            networking.interfaces.ens2.useDHCP = true;
-
-            # Enable flakes experimental feature
-            nix = {
-              package = pkgs.nixFlakes;
-              extraOptions = ''
-                experimental-features = nix-command flakes
-              '';
-              registry.nixpkgs.flake = nixpkgs;
-            };
-
-            # Enable SSH so we don't have to use the console
-            services.openssh.enable = true;
-
-            # Set this to your desired time zone
-            time.timeZone = "Europe/Berlin";
-
-            # Add an admin user so we don't have to log in as root
-            users.users.myuser = {
-              isNormalUser = true;
-              home = "/home/myuser";
-              description = "My example admin user";
-              # wheel allows sudo, networkmanager allows network modifications
-              extraGroups = [ "wheel" "networkmanager" ];
-              # For password login (works with console and SSH):
-              hashedPassword = "$6$Jiqrq/BA.fVAogyP$3hYRaCNEX1X.3BpGEwdnGbtUIYRDZe13Le0K6RzgRY817KgfcnNCvyH6qy7pdhuYLD7ZMxu.HBOpakb9/iDqa.";
-              # For SSH key login (works with SSH only):
-              #openssh.authorizedKeys.keys = [ "ssh-dss AAAAB3Nza... myuser@foobar" ];
-            };
-          })
-        ];
+              # Import our system configuration
+              imports = [
+                ./hardware-configuration.nix
+                ./configuration.nix
+              ];
+            })
+          ];
+      };
     };
+}
+EOF
+```
+
+
+### A simple base configuration.nix
+
+The default `configuration.nix` has a lot of commented out options that can be useful to enable. Take a look at the default `/mnt/etc/nixos/configuration.nix` first before overwriting it. The following is what I would call a bare minimum config for a VM:
+
+Before pasting the following snippet into your installer shell, you'll want to:
+- Pick your own username and home dir
+- Generate your own hashed password (`mkpasswd -m sha-512`)
+- Set your time zone
+
+
+```text
+cat << 'EOF' > /mnt/etc/nixos/configuration.nix
+{ config, pkgs, ... }:
+
+{
+  boot.loader = {
+    systemd-boot.enable = true;
+    efi.canTouchEfiVariables = true;
+  };
+
+  networking = {
+    useDHCP = false;
+    interfaces.ens2.useDHCP = true;
+    firewall.allowedTCPPorts = [ 22 ];
+  };
+
+  # We need git or else we won't be able to apply flakes.
+  environment.systemPackages = with pkgs; [
+    git
+  ];
+
+  # Enable SSH so we don't have to use the console
+  services.openssh.enable = true;
+
+  # Set this to your desired time zone
+  time.timeZone = "Europe/Berlin";
+
+  # Add an admin user so we don't have to log in as root
+  users.users.myuser = {
+    isNormalUser = true;
+    home = "/home/myuser";
+    description = "My example admin user";
+    # wheel allows sudo, networkmanager allows network modifications
+    extraGroups = [ "wheel" "networkmanager" ];
+    # For password login (works with console and SSH):
+    hashedPassword = "$6$E9KhMqnbJgiE$lohYFW7ckILTrYGi59tbRtRQO31Jka73N/1vNnHgAbFWMubawPjFAimB.FkfWuCfODwDuuruKXR6SDQucsDuF.";
+    # For SSH key login (works with SSH only):
+    #openssh.authorizedKeys.keys = [ "ssh-dss AAAAB3Nza... myuser@foobar" ];
   };
 }
 EOF
@@ -148,10 +181,10 @@ git commit -m 'Initial version'
 Run the installer
 -----------------
 
-When installing, we simply point `nixos-install` to our `system` configuration in the flake:
+When installing, we simply point `nixos-install` to our `myhostname` configuration in the flake:
 
 ```text
-nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system
+nixos-install --no-root-passwd --flake /mnt/etc/nixos/#myhostname
 ```
 
 **Note**: We've specified `--no-root-passwd`, which means that you cannot log in as root (you must use your admin account instead). If you omit this option, the installer will ask you to provide a root password at the end of the install process.
@@ -159,5 +192,7 @@ nixos-install --no-root-passwd --flake /mnt/etc/nixos/#system
 As a side-effect, nixos-install will generate `flake.lock`, which locks to the current versions of the software being installed. You should also add this to the source code repository.
 
 If you've made any mistakes, it will print out error messages detailing what you need to fix in your `configuration.nix`.
+
+**Note**: If you've set the `networking.hostName` value and your local DNS server support it, you can now use the hostname rather than the IP address to conect to this machine.
 
 [Back to the VM installer instructions](installing-vm.md#configure-and-install)

@@ -350,10 +350,10 @@ The `if` expression will be familiar to imperative programmers, except that it d
 ```
 nix-repl> x = 5
 
-nix-repl> y = if x > 10 then "foo" else null
+nix-repl> y = if x > 10 then "bigger" else "smaller"
 
 nix-repl> y
-null
+"smaller"
 ```
 
 

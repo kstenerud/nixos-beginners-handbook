@@ -60,11 +60,11 @@ my_function(x):
      return func_3(a, b)
 ```
 
-In the above example (still using a fictional functional language), `func_x` has no effect because it is pure, and the result of its call is not used anywhere. In fact, this function will return the same value no matter what value of `x` you pass in, rendering `x` useless!
+In the above example (still using a fictional functional language), `func_x` has no effect because it is pure, and the result of its call is not used anywhere. In fact, because the result of `func_x(x)` isn't stored or used anywhere, `my_function(x)` will return the same result no matter what value of `x` you pass in, rendering `x` useless!
 
 Because the effects of a function are useless unless stored or used somewhere, everything in Nix is essentially an expression. Every bit of code is either calculating a value, or temporarily storing an intermediate value for the calculation of its final value. At the end of your program, you're left with a single value that represents the result of the program. Anything that wasn't returned is lost.
 
-In fact, your NixOS configuration is basically one big expression yielding the set of your operting system's configuration (the programs installed, the users of the system, the services running, etc). This is what makes deterministic builds possible: Pure functions that yield the same results for the same inputs every time are put together into a final expression that generates the same running system every time.
+Your NixOS configuration is basically one big expression yielding the set of your operting system's configuration (the programs installed, the users of the system, the services running, etc). This is what makes deterministic builds possible: Pure functions yield the same results for the same inputs every time. These are put together into a final expression that generates the exact same running system for the same configuration every time.
 
 
 

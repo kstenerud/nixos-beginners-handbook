@@ -21,8 +21,9 @@ There are many virtual machine technologies to choose from depending on your hos
 | Technology                        | GUI | TUI | Linux | Mac | Windows | Other   |
 | --------------------------------- | --- | --- | ----- | --- | ------- | ------- |
 | [VirtualBox](nixos-virtualbox.md) |  Y  |  Y  |   Y   |  Y  |    Y    | Solaris |
-| [libvirt](nixos-libvirt.md)]      |  Y  |  Y  |   Y   |  Y  |    Y    | FreeBSD |
+| [libvirt](nixos-libvirt.md)       |  Y  |  Y  |   Y   |  Y  |    Y    | FreeBSD |
 
+Once you've installed NixOS on your virtual machine, continue in this document.
 
 
 Connecting to the installer via SSH
@@ -60,7 +61,7 @@ Last login: Sun Aug  1 05:39:07 2021
 [nixos@nixos:~]$
 ```
 
-Or, if you've set up host port forwarding, simply connect to localhost port 2222:
+Or, if you've set up host port forwarding, connect to localhost on the port you've forwarded (for example 2222):
 
 ```text
 $ ssh -p 2222 nixos@localhost
@@ -104,7 +105,7 @@ BYT;
 /dev/vda:17.2GB:virtblk:512:512:unknown:Virtio Block Device:;
 ```
 
-Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt). This builds a 511MB ESP boot partition at the beginning of the disk (`mkpart ESP fat32 1MiB 512MiB`), an 8GB swap partition at the end of the disk (`mkpart primary linux-swap -8GiB 100%`), and uses the remainder for the root fs (`mkpart primary 512MiB -8GiB`). The logical partition ordering is 1: root, 2: swap, 3: boot. We also clear the first block of the drive in case it has a partition table already.
+Here are the disk setup commands using `/dev/sda` (change to `/dev/vda` if you're using libvirt). This builds a 511MB ESP boot partition at the beginning of the disk (`mkpart ESP fat32 1MiB 512MiB`), an 8GB swap partition at the end of the disk (`mkpart primary linux-swap -8GiB 100%`), and uses the remainder for the root fs (`mkpart primary 512MiB -8GiB`). The logical partition ordering is 1: root, 2: swap, 3: boot. We also clear the first block of the drive in case it has an old, existing partition table on it.
 
 ```text
 dd if=/dev/zero of=/dev/sda bs=512 count=1 conv=notrunc
@@ -165,7 +166,7 @@ Edit `/etc/nixos/flake.nix` and then build the new configuration:
 nixos-rebuild switch --flake /etc/nixos/#system
 ```
 
-**IMPORTANT**: Don't forget to commit your changes to the flake or else they'll be ignored! You'll see a warning like `warning: Git tree '/etc/nixos' is dirty`
+**IMPORTANT**: Don't forget to commit your changes to the flake! You'll see a warning like `warning: Git tree '/etc/nixos' is dirty`. Any file that's not part of the repo will be ignored!
 
 #### via configuration.nix
 

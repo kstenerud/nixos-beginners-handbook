@@ -36,6 +36,12 @@ Nix Expression Language
 A quick [introduction to the Nix expression language](nix-language.md), from which everything Nix is built.
 
 
+Building with Flakes
+--------------------
+
+A brief introduction to [building with flakes](build-flakes.md).
+
+
 Configuration Language Basics
 -----------------------------
 
